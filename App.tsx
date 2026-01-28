@@ -98,7 +98,7 @@ const App: React.FC = () => {
 
           <div className="text-center text-slate-500 text-xs mt-4 flex flex-col gap-1">
             <div>Powered by React & Tailwind CSS</div>
-            <div className="opacity-50">v1.1.2-downscaled</div>
+            <div className="opacity-50">v1.1.3-circles</div>
           </div>
         </div>
       </main>

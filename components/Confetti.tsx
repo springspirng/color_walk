@@ -33,7 +33,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
     const centerY = canvas.height / 2;
 
     const newParticles: Particle[] = [];
-    const count = 30; // Absolute minimum for smoothness
+    const count = 35; // Slightly increased now that it's working well
 
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -48,7 +48,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
           y: Math.sin(angle) * speed,
         },
         life: 1.0,
-        size: (Math.random() * 8 + 6) * RES_FACTOR,
+        size: (Math.random() * 7 + 5) * RES_FACTOR,
       });
     }
     particlesRef.current = newParticles;
@@ -73,17 +73,19 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
       const p = particlesRef.current[i];
 
       p.x += p.velocity.x;
-      p.y += p.velocity.y + (0.2 * RES_FACTOR);
-      p.velocity.x *= 0.95;
-      p.velocity.y *= 0.95;
-      p.life -= 0.025; // Even faster fade
+      p.y += p.velocity.y + (0.18 * RES_FACTOR);
+      p.velocity.x *= 0.96;
+      p.velocity.y *= 0.96;
+      p.life -= 0.022;
 
       if (p.life > 0) {
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;
 
-        const width = p.size * (0.6 + Math.sin(p.life * 8) * 0.4);
-        ctx.fillRect(p.x - width / 2, p.y - p.size / 2, width, p.size);
+        ctx.beginPath();
+        // Drawing round particles again as requested
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
 
         nextParticles.push(p);
       }
@@ -121,7 +123,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
       canvas.style.left = '0';
       canvas.style.pointerEvents = 'none';
       canvas.style.zIndex = '50';
-      canvas.style.imageRendering = 'pixelated'; // Keep it sharp-ish even when scaled
+      canvas.style.imageRendering = 'auto'; // Back to auto for smoother circles
     };
 
     window.addEventListener('resize', handleResize);
