@@ -12,7 +12,10 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
   const requestRef = useRef<number>(0);
   const activeRef = useRef<boolean>(active);
 
-  // Sync active state to ref for access in animation loop
+  // Super Aggressive Resolution Downscaling (0.4x)
+  // This reduces the number of pixels to draw by >80%
+  const RES_FACTOR = 0.4;
+
   useEffect(() => {
     activeRef.current = active;
     if (active) {
@@ -26,16 +29,15 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2 for performance
-    const centerX = canvas.width / dpr / 2;
-    const centerY = canvas.height / dpr / 2;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
 
     const newParticles: Particle[] = [];
-    const count = 50; // Optimized for iOS performance
+    const count = 30; // Absolute minimum for smoothness
 
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 5 + 2;
+      const speed = (Math.random() * 5 + 3) * RES_FACTOR;
       newParticles.push({
         id: Math.random(),
         x: centerX,
@@ -46,7 +48,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
           y: Math.sin(angle) * speed,
         },
         life: 1.0,
-        size: Math.random() * 6 + 3,
+        size: (Math.random() * 8 + 6) * RES_FACTOR,
       });
     }
     particlesRef.current = newParticles;
@@ -55,14 +57,10 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
   const animate = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2); // Match resize cap
-    const logicalWidth = canvas.width / dpr;
-    const logicalHeight = canvas.height / dpr;
-
-    ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (particlesRef.current.length === 0 && !activeRef.current) {
       requestRef.current = 0;
@@ -75,19 +73,16 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
       const p = particlesRef.current[i];
 
       p.x += p.velocity.x;
-      p.y += p.velocity.y + 0.18;
-      p.velocity.x *= 0.97;
-      p.velocity.y *= 0.97;
-      p.life -= 0.018;
+      p.y += p.velocity.y + (0.2 * RES_FACTOR);
+      p.velocity.x *= 0.95;
+      p.velocity.y *= 0.95;
+      p.life -= 0.025; // Even faster fade
 
       if (p.life > 0) {
-        // Optimization: Use fillRect (squares) instead of arcs (circles)
-        // fillRect is significantly faster for mobile GPUs to draw
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;
 
-        // Square width fluctuates slightly to simulate "tumbling" confetti
-        const width = p.size * (0.6 + Math.sin(p.life * 10) * 0.4);
+        const width = p.size * (0.6 + Math.sin(p.life * 8) * 0.4);
         ctx.fillRect(p.x - width / 2, p.y - p.size / 2, width, p.size);
 
         nextParticles.push(p);
@@ -111,20 +106,22 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      // Cap DPR at 2.0. iPhones with DPR 3.0 often lag on full-screen drawing.
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const width = window.innerWidth;
       const height = window.innerHeight;
 
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+      // Physically small canvas
+      canvas.width = width * RES_FACTOR;
+      canvas.height = height * RES_FACTOR;
 
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.scale(dpr, dpr);
-      }
+      // Stylistically full-screen (scaled up by browser)
+      canvas.style.width = '100vw';
+      canvas.style.height = '100vh';
+      canvas.style.position = 'fixed';
+      canvas.style.top = '0';
+      canvas.style.left = '0';
+      canvas.style.pointerEvents = 'none';
+      canvas.style.zIndex = '50';
+      canvas.style.imageRendering = 'pixelated'; // Keep it sharp-ish even when scaled
     };
 
     window.addEventListener('resize', handleResize);
@@ -138,7 +135,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
   return (
     <canvas
       ref={canvasRef}
-      className={`fixed inset-0 pointer-events-none z-50 transition-opacity duration-1000 ${active ? 'opacity-100' : 'opacity-0'}`}
+      style={{ display: active ? 'block' : 'none' }}
     />
   );
 };
