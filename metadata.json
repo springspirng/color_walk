@@ -1,0 +1,5 @@
+{
+  "name": "Prismatic Slots",
+  "description": "A vibrant, responsive color slot machine built with React and Tailwind CSS. Features smooth physics-based animations and particle effects.",
+  "requestFramePermissions": []
+}
