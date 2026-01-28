@@ -26,16 +26,16 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Use internal logical dimensions or half of physical dimensions
-    const centerX = canvas.width / (window.devicePixelRatio || 1) / 2;
-    const centerY = canvas.height / (window.devicePixelRatio || 1) / 2;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2 for performance
+    const centerX = canvas.width / dpr / 2;
+    const centerY = canvas.height / dpr / 2;
 
     const newParticles: Particle[] = [];
-    const count = 80; // Slightly reduced for mobile smoothness
+    const count = 50; // Optimized for iOS performance
 
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 6 + 2;
+      const speed = Math.random() * 5 + 2;
       newParticles.push({
         id: Math.random(),
         x: centerX,
@@ -46,7 +46,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
           y: Math.sin(angle) * speed,
         },
         life: 1.0,
-        size: Math.random() * 4 + 2,
+        size: Math.random() * 6 + 3,
       });
     }
     particlesRef.current = newParticles;
@@ -58,7 +58,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2); // Match resize cap
     const logicalWidth = canvas.width / dpr;
     const logicalHeight = canvas.height / dpr;
 
@@ -69,26 +69,27 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
       return;
     }
 
-    // Update and Draw in one pass
     const nextParticles: Particle[] = [];
 
     for (let i = 0; i < particlesRef.current.length; i++) {
       const p = particlesRef.current[i];
 
-      // Update physics
       p.x += p.velocity.x;
-      p.y += p.velocity.y + 0.15; // increased gravity slightly
-      p.velocity.x *= 0.98;
-      p.velocity.y *= 0.98;
-      p.life -= 0.015;
+      p.y += p.velocity.y + 0.18;
+      p.velocity.x *= 0.97;
+      p.velocity.y *= 0.97;
+      p.life -= 0.018;
 
       if (p.life > 0) {
-        // Draw
+        // Optimization: Use fillRect (squares) instead of arcs (circles)
+        // fillRect is significantly faster for mobile GPUs to draw
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+
+        // Square width fluctuates slightly to simulate "tumbling" confetti
+        const width = p.size * (0.6 + Math.sin(p.life * 10) * 0.4);
+        ctx.fillRect(p.x - width / 2, p.y - p.size / 2, width, p.size);
+
         nextParticles.push(p);
       }
     }
@@ -105,21 +106,18 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
     }
   }, [active]);
 
-  // Handle Resize and High-DPI
   useEffect(() => {
     const handleResize = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const dpr = window.devicePixelRatio || 1;
+      // Cap DPR at 2.0. iPhones with DPR 3.0 often lag on full-screen drawing.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const width = window.innerWidth;
       const height = window.innerHeight;
 
-      // Set physical bits
       canvas.width = width * dpr;
       canvas.height = height * dpr;
-
-      // Set CSS display bits
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
 
@@ -140,7 +138,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ colorHex, active }) => {
   return (
     <canvas
       ref={canvasRef}
-      className={`fixed inset-0 pointer-events-none z-50 transition-opacity duration-700 ${active ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 pointer-events-none z-50 transition-opacity duration-1000 ${active ? 'opacity-100' : 'opacity-0'}`}
     />
   );
 };
